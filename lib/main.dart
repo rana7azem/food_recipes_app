@@ -7,7 +7,7 @@ void main() {
 }
 
 class FoodRecipesApp extends StatefulWidget {
-  const FoodRecipesApp({Key? key}) : super(key: key);
+  const FoodRecipesApp({super.key});
 
   @override
   State<FoodRecipesApp> createState() => _FoodRecipesAppState();

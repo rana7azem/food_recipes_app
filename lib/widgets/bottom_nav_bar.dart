@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../screens/home_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/settings_screen.dart';
+import '../screens/Recipes.dart';
+import '../screens/CheckList.dart';
+import '../screens/Add.dart';
+import '../screens/profile.dart';
+
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
@@ -14,10 +16,12 @@ class _BottomNavBarState extends State<BottomNavBar> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomeScreen(),
-    const ProfileScreen(),
-    const SettingsScreen(),
-  ];
+  const RecipesScreen(),
+  const CheckListScreen(),
+  const AddScreen(),
+  const ProfileScreen(),
+];
+
 
   void _onItemTapped(int index) {
     setState(() {
@@ -35,10 +39,11 @@ class _BottomNavBarState extends State<BottomNavBar> {
         selectedItemColor: Colors.orange,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+           BottomNavigationBarItem(icon: Icon(Icons.book), label: "Recipes"),
+           BottomNavigationBarItem(icon: Icon(Icons.checklist), label: "Checklist"),
+           BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: "Add"),
+           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+  ],
       ),
     );
   }
