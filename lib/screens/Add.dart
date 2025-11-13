@@ -35,7 +35,7 @@ class _AddRecipePageState extends State<AddScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              'assets/book_icon.png',
+              'assets/images/cook-book.png',
               height: 40,
             ),
             const SizedBox(width: 8),
