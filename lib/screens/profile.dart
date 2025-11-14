@@ -48,15 +48,9 @@ class ProfileScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.grey[200],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'JD',
-                          style: TextStyle(
-                            fontSize: 40,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey,
-                          ),
+                        image: const DecorationImage(
+                          image: AssetImage('assets/images/dr.youssry.png'),
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
@@ -86,7 +80,7 @@ class ProfileScreen extends StatelessWidget {
             
             // Name
             const Text(
-              'Jane Doe',
+              'Yousry Abdul Azeem',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -98,7 +92,7 @@ class ProfileScreen extends StatelessWidget {
             
             // Email
             Text(
-              'jane.doe@email.com',
+              'dr.yousry@email.com',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[600],
