@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AddScreen extends StatefulWidget {
   const AddScreen({super.key});
@@ -12,15 +13,92 @@ class AddScreen extends StatefulWidget {
 class _AddRecipePageState extends State<AddScreen> {
   final _formKey = GlobalKey<FormState>();
   File? _image;
+  final ImagePicker _picker = ImagePicker();
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  // Controllers for text fields
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _difficultyController = TextEditingController();
+  final TextEditingController _prepTimeController = TextEditingController();
+  final TextEditingController _cookTimeController = TextEditingController();
+  final TextEditingController _servingsController = TextEditingController();
+
+  
+  Future<void> _pickImage(ImageSource source) async {
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Camera permission denied ❌")),
+        );
+        return;
+      }
+    } else {
+      final status = await Permission.photos.request();
+      if (!status.isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gallery permission denied ❌")),
+        );
+        return;
+      }
+    }
+
+    final pickedFile = await _picker.pickImage(source: source);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
       });
     }
+  }
+
+  
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(20),
+        height: 150,
+        child: Column(
+          children: [
+            const Text(
+              "Choose Image Source",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const SizedBox(height: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text("Camera"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orangeAccent,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                  icon: const Icon(Icons.image),
+                  label: const Text("Gallery"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -64,76 +142,102 @@ class _AddRecipePageState extends State<AddScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Image upload section
+              
               Text("Recipe Photo", style: TextStyle(color: Colors.grey[800])),
               const SizedBox(height: 8),
               GestureDetector(
-                onTap: _pickImage,
+                onTap: _showImagePickerOptions,
                 child: Container(
-                  height: 160,
+                  height: 180,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade300),
-                    image: _image != null
-                        ? DecorationImage(
-                            image: FileImage(_image!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
                   ),
                   child: _image == null
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.camera_alt_outlined,
-                                size: 40, color: Colors.grey),
-                            SizedBox(height: 10),
-                            Text("Upload Photo",
-                                style: TextStyle(color: Colors.grey)),
-                          ],
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.camera_alt_outlined,
+                                  size: 45, color: Colors.grey),
+                              SizedBox(height: 10),
+                              Text("Upload Photo",
+                                  style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
                         )
-                      : null,
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            _image!,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                 ),
               ),
 
               const SizedBox(height: 25),
 
-              _buildTextField("Recipe Name *", "e.g., Chocolate Chip Cookies"),
+              _buildTextField("Recipe Name *", "e.g., Chocolate Cake", _nameController),
               const SizedBox(height: 15),
 
               Row(
                 children: [
-                  Expanded(child: _buildTextField("Category *", "e.g., Dessert")),
+                  Expanded(child: _buildTextField("Category *", "e.g., Dessert", _categoryController)),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildTextField("Difficulty", "Easy")),
+                  Expanded(child: _buildTextField("Difficulty", "Easy", _difficultyController)),
                 ],
               ),
               const SizedBox(height: 15),
 
               Row(
                 children: [
-                  Expanded(child: _buildTextField("Prep Time", "e.g., 15 min")),
+                  Expanded(child: _buildTextField("Prep Time", "e.g., 15 min", _prepTimeController)),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildTextField("Cook Time", "e.g., 30 min")),
-
+                  Expanded(child: _buildTextField("Cook Time", "e.g., 30 min", _cookTimeController)),
                 ],
               ),
               const SizedBox(height: 15),
 
-              _buildTextField("Servings", "4"),
+              _buildTextField("Servings", "4", _servingsController),
               const SizedBox(height: 25),
 
+               
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
+                      if (_image == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Please upload a photo first 📸"),
+                          ),
+                        );
+                        return;
+                      }
+
+                        
+                      final newRecipe = {
+                        "name": _nameController.text,
+                        "category": _categoryController.text,
+                        "difficulty": _difficultyController.text,
+                        "prepTime": _prepTimeController.text,
+                        "cookTime": _cookTimeController.text,
+                        "servings": _servingsController.text,
+                        "imagePath": _image!.path,
+                      };
+
+                    
+                      Navigator.pop(context, newRecipe);
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Recipe added successfully!"),
+                          content: Text("Recipe added successfully! 🎉"),
                         ),
                       );
                     }
@@ -158,8 +262,10 @@ class _AddRecipePageState extends State<AddScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String hint) {
+  // ✅ Text Field reusable widget
+  Widget _buildTextField(String label, String hint, TextEditingController controller) {
     return TextFormField(
+      controller: controller,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -176,6 +282,12 @@ class _AddRecipePageState extends State<AddScreen> {
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
       ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return "This field is required";
+        }
+        return null;
+      },
     );
   }
 }
