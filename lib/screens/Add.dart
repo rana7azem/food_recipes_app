@@ -27,7 +27,7 @@ class _AddRecipePageState extends State<AddScreen> {
 
   bool _isUploading = false;
 
-  // Pick image from camera or gallery
+  // 📸 Pick image from camera or gallery
   Future<void> _pickImage(ImageSource source) async {
     if (source == ImageSource.camera) {
       final status = await Permission.camera.request();
@@ -55,20 +55,20 @@ class _AddRecipePageState extends State<AddScreen> {
     }
   }
 
-  //Upload to Firebase Storage
+  // ☁️ Upload to Firebase Storage
   Future<String?> _uploadImageToFirebase(File imageFile) async {
     try {
       final fileName = "recipes/${DateTime.now().millisecondsSinceEpoch}.jpg";
       final ref = FirebaseStorage.instance.ref().child(fileName);
       await ref.putFile(imageFile);
-      return await ref.getDownloadURL(); //return public link
+      return await ref.getDownloadURL();
     } catch (e) {
       debugPrint("Image upload error: $e");
       return null;
     }
   }
 
-  // Save recipe data to Firestore
+  // 🔥 Save recipe data to Firestore
   Future<void> _saveRecipe() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -106,6 +106,7 @@ class _AddRecipePageState extends State<AddScreen> {
     }
   }
 
+  // 📷 Show image picker options
   void _showImagePickerOptions() {
     showModalBottomSheet(
       context: context,
@@ -117,9 +118,13 @@ class _AddRecipePageState extends State<AddScreen> {
         height: 150,
         child: Column(
           children: [
-            const Text(
+            Text(
               "Choose Image Source",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
             ),
             const SizedBox(height: 15),
             Row(
@@ -144,7 +149,7 @@ class _AddRecipePageState extends State<AddScreen> {
                   icon: const Icon(Icons.image),
                   label: const Text("Gallery"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[700],
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
                   ),
                 ),
               ],
@@ -157,38 +162,38 @@ class _AddRecipePageState extends State<AddScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-appBar: AppBar(
-  backgroundColor: Colors.white,
-  elevation: 1,
-  centerTitle: true,
-  title: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Image.asset(
-        'assets/images/cook-book.png', 
-        height: 28, 
-      ),
-      const SizedBox(width: 8),
-      const Text(
-        "Add New Recipe",
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        elevation: 1,
+        centerTitle: true,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/images/cook-book.png', height: 28),
+            const SizedBox(width: 8),
+            Text(
+              "Add New Recipe",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: theme.appBarTheme.foregroundColor,
+              ),
+            ),
+          ],
         ),
       ),
-    ],
-  ),
-),
-body: SingleChildScrollView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Recipe Photo", style: TextStyle(color: Colors.grey[800])),
+              Text("Recipe Photo", style: theme.textTheme.bodyLarge),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _showImagePickerOptions,
@@ -196,22 +201,28 @@ body: SingleChildScrollView(
                   height: 180,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: theme.cardColor,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(
+                      color: theme.dividerColor.withOpacity(0.3),
+                    ),
                   ),
                   child: _image == null
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.camera_alt_outlined,
-                                  size: 45, color: Colors.grey),
-                              SizedBox(height: 10),
-                              Text("Upload Photo",
-                                  style: TextStyle(color: Colors.grey)),
-                            ],
-                          ),
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt_outlined,
+                                size: 45,
+                                color: theme.iconTheme.color?.withOpacity(0.6)),
+                            const SizedBox(height: 10),
+                            Text(
+                              "Upload Photo",
+                              style: TextStyle(
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
                         )
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(12),
@@ -223,32 +234,28 @@ body: SingleChildScrollView(
                         ),
                 ),
               ),
-
               const SizedBox(height: 25),
 
               _buildTextField(
-                controller: _nameController,
-                label: "Recipe Name *",
-                hint: "e.g., Chocolate Cake",
-              ),
+                  controller: _nameController,
+                  label: "Recipe Name *",
+                  hint: "e.g., Chocolate Cake"),
               const SizedBox(height: 15),
 
               Row(
                 children: [
                   Expanded(
                     child: _buildTextField(
-                      controller: _categoryController,
-                      label: "Category *",
-                      hint: "Dessert",
-                    ),
+                        controller: _categoryController,
+                        label: "Category *",
+                        hint: "Dessert"),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: _buildTextField(
-                      controller: _difficultyController,
-                      label: "Difficulty",
-                      hint: "Easy",
-                    ),
+                        controller: _difficultyController,
+                        label: "Difficulty",
+                        hint: "Easy"),
                   ),
                 ],
               ),
@@ -258,28 +265,25 @@ body: SingleChildScrollView(
                 children: [
                   Expanded(
                     child: _buildTextField(
-                      controller: _prepTimeController,
-                      label: "Prep Time",
-                      hint: "15 min",
-                    ),
+                        controller: _prepTimeController,
+                        label: "Prep Time",
+                        hint: "15 min"),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: _buildTextField(
-                      controller: _cookTimeController,
-                      label: "Cook Time",
-                      hint: "30 min",
-                    ),
+                        controller: _cookTimeController,
+                        label: "Cook Time",
+                        hint: "30 min"),
                   ),
                 ],
               ),
               const SizedBox(height: 15),
 
               _buildTextField(
-                controller: _servingsController,
-                label: "Servings",
-                hint: "4",
-              ),
+                  controller: _servingsController,
+                  label: "Servings",
+                  hint: "4"),
               const SizedBox(height: 15),
 
               _buildTextField(
@@ -288,7 +292,6 @@ body: SingleChildScrollView(
                 hint: "Write short details...",
                 maxLines: 3,
               ),
-
               const SizedBox(height: 25),
 
               SizedBox(
@@ -320,12 +323,14 @@ body: SingleChildScrollView(
     );
   }
 
+  // 🧱 Custom Text Field
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
     int maxLines = 1,
   }) {
+    final theme = Theme.of(context);
     return TextFormField(
       controller: controller,
       validator: (value) {
@@ -339,16 +344,18 @@ body: SingleChildScrollView(
         labelText: label,
         hintText: hint,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: theme.cardColor,
+        labelStyle: TextStyle(color: theme.textTheme.bodyLarge?.color),
+        hintStyle: TextStyle(color: theme.hintColor),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.3)),
         ),
       ),
     );

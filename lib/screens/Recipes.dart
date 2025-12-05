@@ -72,14 +72,16 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Recipes'),
         centerTitle: true,
-        backgroundColor: Colors.orangeAccent,
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
       ),
-
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.orangeAccent,
         onPressed: () async {
@@ -90,14 +92,15 @@ class _RecipesScreenState extends State<RecipesScreen> {
         },
         child: const Icon(Icons.add),
       ),
-
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.orangeAccent),
+          ? Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.secondary,
+              ),
             )
           : Column(
               children: [
-                // Search Bar
+                // 🔍 Search Bar
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: TextField(
@@ -121,12 +124,12 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Colors.grey[100],
+                      fillColor: theme.cardColor,
                     ),
                   ),
                 ),
 
-                // Category Filter
+                // 🍽️ Category Filter
                 SizedBox(
                   height: 45,
                   child: ListView.builder(
@@ -147,9 +150,11 @@ class _RecipesScreenState extends State<RecipesScreen> {
                             _filterRecipes();
                           },
                           selectedColor: Colors.orangeAccent,
-                          backgroundColor: Colors.grey[200],
+                          backgroundColor: theme.cardColor,
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black,
+                            color: isSelected
+                                ? Colors.white
+                                : theme.textTheme.bodyLarge?.color,
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.normal,
@@ -159,10 +164,9 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     },
                   ),
                 ),
-
                 const SizedBox(height: 10),
 
-                // Recipes Grid (Firebase + API)
+                // 🧾 Recipes Grid (Firebase + API)
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
@@ -176,8 +180,14 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
                       if (_filteredRecipes.isEmpty &&
                           (userRecipes.isEmpty || !snapshot.hasData)) {
-                        return const Center(
-                            child: Text('No recipes found 😔'));
+                        return Center(
+                          child: Text(
+                            'No recipes found 😔',
+                            style: TextStyle(
+                              color: theme.textTheme.bodyLarge?.color,
+                            ),
+                          ),
+                        );
                       }
 
                       final totalRecipes =
@@ -213,7 +223,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
     );
   }
 
-  // Recipe from API
+  // 🔹 Recipe from API
   Widget _buildApiRecipeCard(dynamic recipe, BuildContext context) {
     return InkWell(
       onTap: () {
@@ -229,11 +239,12 @@ class _RecipesScreenState extends State<RecipesScreen> {
         name: recipe['name'],
         category: recipe['mealType']?.first ?? "General",
         prepTime: "${recipe['prepTimeMinutes']} min",
+        context: context,
       ),
     );
   }
 
-  // Recipe from Firebase
+  // 🔹 Recipe from Firebase
   Widget _buildFirebaseRecipeCard(
       Map<String, dynamic> recipe, BuildContext context) {
     return InkWell(
@@ -250,18 +261,24 @@ class _RecipesScreenState extends State<RecipesScreen> {
         name: recipe['name'] ?? 'No Name',
         category: recipe['category'] ?? 'N/A',
         prepTime: recipe['prepTime'] ?? '--',
+        context: context,
       ),
     );
   }
 
+  // 🧱 Reusable Card Widget
   Widget _buildCard({
     required String image,
     required String name,
     required String category,
     required String prepTime,
+    required BuildContext context,
   }) {
+    final theme = Theme.of(context);
+
     return Card(
       elevation: 4,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +292,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                   ? Image.network(image,
                       width: double.infinity, fit: BoxFit.cover)
                   : Container(
-                      color: Colors.grey[200],
+                      color: theme.dividerColor.withOpacity(0.1),
                       child: const Icon(Icons.image, size: 50),
                     ),
             ),
@@ -287,13 +304,18 @@ class _RecipesScreenState extends State<RecipesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  Text("Category: $category"),
-                  Text("Prep: $prepTime"),
+                  Text(
+                    name,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text("Category: $category",
+                      style: theme.textTheme.bodyMedium),
+                  Text("Prep: $prepTime", style: theme.textTheme.bodyMedium),
                 ],
               ),
             ),
@@ -310,10 +332,13 @@ class RecipeDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(recipe['name']),
-        backgroundColor: Colors.orangeAccent,
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -331,12 +356,12 @@ class RecipeDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(recipe['name'],
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
               "Category: ${recipe['mealType']?.join(', ') ?? 'N/A'}",
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             const Text("Ingredients:",
@@ -364,10 +389,13 @@ class FirebaseRecipeDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(recipe['name'] ?? 'Recipe'),
-        backgroundColor: Colors.orangeAccent,
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -386,19 +414,19 @@ class FirebaseRecipeDetailsScreen extends StatelessWidget {
               ),
             const SizedBox(height: 16),
             Text(recipe['name'] ?? '',
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text("Category: ${recipe['category'] ?? 'N/A'}",
-                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+                style: theme.textTheme.bodyMedium),
             const SizedBox(height: 8),
             Text("Prep Time: ${recipe['prepTime'] ?? '--'}",
-                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+                style: theme.textTheme.bodyMedium),
             Text("Cook Time: ${recipe['cookTime'] ?? '--'}",
-                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+                style: theme.textTheme.bodyMedium),
             const SizedBox(height: 8),
             Text("Servings: ${recipe['servings'] ?? '--'}",
-                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+                style: theme.textTheme.bodyMedium),
             const SizedBox(height: 16),
             const Text("🧾 Description:",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
