@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:food_recipes_app/helper/theme_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: themeProvider.isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: themeProvider.isDark ? Colors.grey[900] : Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Row(
@@ -18,10 +22,10 @@ class ProfileScreen extends StatelessWidget {
               height: 30,
             ),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               "FLAVOR FIESTA",
               style: TextStyle(
-                color: Colors.black87,
+                color: themeProvider.isDark ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
                 letterSpacing: 1,
@@ -34,7 +38,7 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            
+
             // Profile Picture Section
             Center(
               child: SizedBox(
@@ -75,91 +79,126 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Name
-            const Text(
+            Text(
               'Yousry Abdul Azeem',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: themeProvider.isDark ? Colors.white : Colors.black87,
               ),
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             // Email
             Text(
               'dr.yousry@email.com',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[600],
+                color: themeProvider.isDark ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Stats Cards
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildStatCard('24', 'Recipes'),
-                  _buildStatCard('12', 'Favorites'),
-                  _buildStatCard('8', 'Created'),
+                  _buildStatCard('24', 'Recipes', themeProvider),
+                  _buildStatCard('12', 'Favorites', themeProvider),
+                  _buildStatCard('8', 'Created', themeProvider),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 40),
-            
+
             // Preferences Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Preferences',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: themeProvider.isDark ? Colors.white : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 16),
+
                   _buildPreferenceRow(
                     icon: Icons.favorite_outline,
                     title: 'Dietary Restrictions',
                     onTap: () {},
+                    themeProvider: themeProvider,
                   ),
                   const SizedBox(height: 12),
+
                   _buildPreferenceRow(
                     icon: Icons.notifications_outlined,
                     title: 'Notifications',
                     onTap: () {},
+                    themeProvider: themeProvider,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 🌙 Dark Mode Toggle
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: themeProvider.isDark ? Colors.grey[850] : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.dark_mode, color: themeProvider.isDark ? Colors.white : Colors.black87),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            "Dark Mode",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: themeProvider.isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Switch(
+                          value: themeProvider.isDark,
+                          onChanged: (value) {
+                            themeProvider.toggleTheme(value);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Settings Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Settings',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: themeProvider.isDark ? Colors.white : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -167,17 +206,19 @@ class ProfileScreen extends StatelessWidget {
                     icon: Icons.settings_outlined,
                     title: 'Account Settings',
                     onTap: () {},
+                    themeProvider: themeProvider,
                   ),
                   const SizedBox(height: 12),
                   _buildPreferenceRow(
                     icon: Icons.lock_outline,
                     title: 'Privacy & Security',
                     onTap: () {},
+                    themeProvider: themeProvider,
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 40),
           ],
         ),
@@ -185,22 +226,22 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String number, String label) {
+  Widget _buildStatCard(String number, String label, ThemeProvider themeProvider) {
     return Container(
       width: 100,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: themeProvider.isDark ? Colors.grey[900] : Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
           Text(
             number,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: themeProvider.isDark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 8),
@@ -208,7 +249,7 @@ class ProfileScreen extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: themeProvider.isDark ? Colors.grey[400] : Colors.grey[600],
             ),
           ),
         ],
@@ -220,6 +261,7 @@ class ProfileScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    required ThemeProvider themeProvider,
   }) {
     return InkWell(
       onTap: onTap,
@@ -227,7 +269,7 @@ class ProfileScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: themeProvider.isDark ? Colors.grey[850] : Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -235,22 +277,22 @@ class ProfileScreen extends StatelessWidget {
             Icon(
               icon,
               size: 24,
-              color: Colors.black87,
+              color: themeProvider.isDark ? Colors.white : Colors.black87,
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black87,
+                  color: themeProvider.isDark ? Colors.white : Colors.black87,
                 ),
               ),
             ),
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Colors.grey[600],
+              color: themeProvider.isDark ? Colors.grey[400] : Colors.grey[600],
             ),
           ],
         ),
@@ -258,4 +300,3 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 }
-
