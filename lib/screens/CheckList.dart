@@ -83,15 +83,18 @@ class _CheckListScreenState extends State<CheckListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color;
+
     if (checklists.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(theme, textColor);
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
-          // Top safe area with header - thumb zone friendly
+          // Header
           Container(
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 16,
@@ -100,10 +103,10 @@ class _CheckListScreenState extends State<CheckListScreen> {
               bottom: 16,
             ),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.appBarTheme.backgroundColor ?? theme.cardColor,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withOpacity(0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -111,61 +114,53 @@ class _CheckListScreenState extends State<CheckListScreen> {
             ),
             child: Row(
               children: [
-                Image.asset(
-                  'assets/images/cook-book.png',
-                  height: 28,
-                ),
+                Image.asset('assets/images/cook-book.png', height: 28),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     "FLAVOR FIESTA",
                     style: TextStyle(
-                      color: Colors.black87,
+                      color: textColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                       letterSpacing: 0.5,
                     ),
                   ),
                 ),
-                // Add button in header
+                // Add button
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: Colors.orangeAccent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
                     onPressed: _addNewChecklist,
                     icon: const Icon(Icons.add, color: Colors.white),
-                    iconSize: 24,
                   ),
                 ),
               ],
             ),
           ),
 
-          // Main content area
+          // PageView
           Expanded(
             child: PageView.builder(
               controller: pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  selectedChecklistIndex = index;
-                });
-              },
+              onPageChanged: (index) =>
+                  setState(() => selectedChecklistIndex = index),
               itemCount: checklists.length,
-              itemBuilder: (context, index) {
-                return _buildChecklistPage(checklists[index], index);
-              },
+              itemBuilder: (context, index) =>
+                  _buildChecklistPage(theme, checklists[index], index),
             ),
           ),
 
-          // Bottom checklist names indicator
+          // Bottom Selector
           if (checklists.length > 1)
             Container(
               height: 80,
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -182,20 +177,23 @@ class _CheckListScreenState extends State<CheckListScreen> {
                   final isSelected = index == selectedChecklistIndex;
                   return GestureDetector(
                     onTap: () {
-                      pageController.animateToPage(
-                        index,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
+                      pageController.animateToPage(index,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut);
                     },
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.blue : Colors.grey[100],
+                        color: isSelected
+                            ? Colors.orangeAccent
+                            : theme.cardColor,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? Colors.blue : Colors.grey[300]!,
+                          color: isSelected
+                              ? Colors.orangeAccent
+                              : Colors.grey[300]!,
                           width: 1,
                         ),
                       ),
@@ -205,7 +203,8 @@ class _CheckListScreenState extends State<CheckListScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : Colors.grey[700],
+                            color:
+                                isSelected ? Colors.white : textColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -221,29 +220,23 @@ class _CheckListScreenState extends State<CheckListScreen> {
     );
   }
 
-  Widget _buildChecklistPage(Checklist checklist, int index) {
-    final completedCount = checklist.items.where((item) => item.isChecked).length;
+  Widget _buildChecklistPage(
+      ThemeData theme, Checklist checklist, int index) {
+    final textColor = theme.textTheme.bodyLarge?.color;
+    final completedCount = checklist.items.where((i) => i.isChecked).length;
     final totalCount = checklist.items.length;
     final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
-
-    final groupedItems = <String, List<ChecklistItem>>{};
-    for (var item in checklist.items) {
-      if (!groupedItems.containsKey(item.category)) {
-        groupedItems[item.category] = [];
-      }
-      groupedItems[item.category]!.add(item);
-    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          // Header with progress - optimized for thumb zone
+          // Progress header
           Container(
             margin: const EdgeInsets.only(top: 16, bottom: 20),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -261,14 +254,13 @@ class _CheckListScreenState extends State<CheckListScreen> {
                     Expanded(
                       child: Text(
                         checklist.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: textColor,
                         ),
                       ),
                     ),
-                    // Delete button in thumb-friendly position
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.red[50],
@@ -276,70 +268,49 @@ class _CheckListScreenState extends State<CheckListScreen> {
                       ),
                       child: IconButton(
                         onPressed: () => _deleteChecklist(index),
-                        icon: Icon(Icons.delete_outline, color: Colors.red[600]),
+                        icon: Icon(Icons.delete_outline,
+                            color: Colors.red[600]),
                         iconSize: 20,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                
-                // Progress bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 8,
-                    backgroundColor: Colors.grey[200],
+                    backgroundColor: Colors.grey[300],
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      progress == 1.0 ? Colors.green : Colors.blue,
+                      progress == 1.0
+                          ? Colors.green
+                          : Colors.orangeAccent,
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '$completedCount of $totalCount items completed',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
 
-          // Items list - scrollable content
+          // Items
           Expanded(
-            child: groupedItems.isEmpty
+            child: checklist.items.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.checklist_outlined,
-                          size: 64,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No items in this checklist',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'No items in this checklist',
+                      style: TextStyle(color: Colors.grey[600]),
                     ),
                   )
                 : ListView(
                     padding: const EdgeInsets.only(bottom: 20),
-                    children: groupedItems.entries.map((entry) {
-                      return _buildCategorySection(
-                        category: entry.key,
-                        items: entry.value,
-                        checklistId: checklist.id,
-                      );
+                    children: checklist.items.map((item) {
+                      return _buildChecklistTile(theme, item, checklist.id);
                     }).toList(),
                   ),
           ),
@@ -348,219 +319,93 @@ class _CheckListScreenState extends State<CheckListScreen> {
     );
   }
 
-  Widget _buildCategorySection({
-    required String category,
-    required List<ChecklistItem> items,
-    required String checklistId,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: Text(
-            category,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-        ...items.map((item) {
-          return _buildChecklistTile(
-            item: item,
-            checklistId: checklistId,
-          );
-        }),
-      ],
-    );
-  }
+  Widget _buildChecklistTile(
+      ThemeData theme, ChecklistItem item, String checklistId) {
+    final textColor = theme.textTheme.bodyLarge?.color;
 
-  Widget _buildChecklistTile({
-    required ChecklistItem item,
-    required String checklistId,
-  }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: item.isChecked ? Colors.green[300]! : Colors.grey[200]!,
-          width: item.isChecked ? 2 : 1,
+          color: item.isChecked
+              ? Colors.green
+              : Colors.grey[300]!,
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _toggleItem(checklistId, item.id),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Large, thumb-friendly checkbox
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: item.isChecked ? Colors.green : Colors.transparent,
-                    border: Border.all(
-                      color: item.isChecked ? Colors.green : Colors.grey[400]!,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: item.isChecked
-                      ? const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 18,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                
-                // Item details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: item.isChecked
-                              ? Colors.grey[500]
-                              : Colors.black87,
-                          decoration: item.isChecked
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${item.quantity} ${item.unit}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: item.isChecked 
-                              ? Colors.grey[400]
-                              : Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+      child: ListTile(
+        onTap: () => _toggleItem(checklistId, item.id),
+        leading: Icon(
+          item.isChecked ? Icons.check_box : Icons.check_box_outline_blank,
+          color: item.isChecked ? Colors.green : textColor,
+        ),
+        title: Text(
+          item.name,
+          style: TextStyle(
+            color: item.isChecked ? Colors.grey : textColor,
+            decoration: item.isChecked
+                ? TextDecoration.lineThrough
+                : null,
           ),
+        ),
+        subtitle: Text(
+          '${item.quantity} ${item.unit}',
+          style: TextStyle(color: Colors.grey[600]),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeData theme, Color? textColor) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              color: theme.appBarTheme.backgroundColor ?? theme.cardColor,
               child: Row(
                 children: [
-                  Image.asset(
-                    'assets/images/cook-book.png',
-                    height: 28,
-                  ),
+                  Image.asset('assets/images/cook-book.png', height: 28),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "FLAVOR FIESTA",
                       style: TextStyle(
-                        color: Colors.black87,
+                        color: textColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
-                  // Add button in header
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.blue,
+                      color: Colors.orangeAccent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
                       onPressed: _addNewChecklist,
                       icon: const Icon(Icons.add, color: Colors.white),
-                      iconSize: 24,
                     ),
                   ),
                 ],
               ),
             ),
-            
-            // Empty state content
             Expanded(
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.checklist_outlined,
-                      size: 80,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'No Checklists Yet',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        'Create your first checklist to keep track of your shopping and cooking needs',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'No Checklists Yet',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-            
           ],
         ),
       ),
@@ -570,7 +415,6 @@ class _CheckListScreenState extends State<CheckListScreen> {
 
 class _AddChecklistDialog extends StatefulWidget {
   final Function(String) onAdd;
-
   const _AddChecklistDialog({required this.onAdd});
 
   @override
@@ -594,12 +438,20 @@ class _AddChecklistDialogState extends State<_AddChecklistDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color;
+
     return AlertDialog(
-      title: const Text('Create New Checklist'),
+      backgroundColor: theme.cardColor,
+      title: Text('Create New Checklist', style: TextStyle(color: textColor)),
       content: TextField(
         controller: _titleController,
+        style: TextStyle(color: textColor),
         decoration: InputDecoration(
           hintText: 'Enter checklist name',
+          filled: true,
+          fillColor: theme.scaffoldBackgroundColor,
+          hintStyle: TextStyle(color: Colors.grey[500]),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -608,7 +460,7 @@ class _AddChecklistDialogState extends State<_AddChecklistDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text('Cancel', style: TextStyle(color: textColor)),
         ),
         ElevatedButton(
           onPressed: () {
@@ -618,7 +470,7 @@ class _AddChecklistDialogState extends State<_AddChecklistDialog> {
             }
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
+            backgroundColor: Colors.orangeAccent,
           ),
           child: const Text('Create'),
         ),
