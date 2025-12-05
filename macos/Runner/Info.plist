@@ -28,5 +28,14 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- Location permissions for GPS functionality -->
+	<key>NSLocationUsageDescription</key>
+	<string>This app needs access to your location to find nearby grocery stores where you can buy ingredients.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to find nearby grocery stores where you can buy ingredients.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs access to your location to find nearby grocery stores where you can buy ingredients.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to find nearby grocery stores where you can buy ingredients.</string>
 </dict>
 </plist>

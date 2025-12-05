@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:food_recipes_app/models/checklist.dart';
+import 'package:food_recipes_app/screens/MapScreen.dart';
 
 class CheckListScreen extends StatefulWidget {
   const CheckListScreen({super.key});
@@ -303,6 +304,37 @@ class _CheckListScreenState extends State<CheckListScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Find My Ingredients button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MapScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.location_on, color: Colors.white),
+                    label: const Text(
+                      'Find My Ingredients',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
               ],
