@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:food_recipes_app/helper/api_service.dart';
+import 'package:food_recipes_app/screens/Add.dart';
 
 class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
@@ -12,6 +14,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<dynamic> _allRecipes = [];
   List<dynamic> _filteredRecipes = [];
+  final List<Map<String, dynamic>> _userRecipes = [];
   bool _isLoading = true;
   String selectedCategory = 'All';
   List<String> categories = ['All'];
@@ -21,12 +24,12 @@ class _RecipesScreenState extends State<RecipesScreen> {
     super.initState();
     _fetchRecipes();
 
-    
     _searchController.addListener(() {
       setState(() {});
     });
   }
 
+  
   Future<void> _fetchRecipes() async {
     try {
       final data = await ApiService.fetchRecipes();
@@ -51,19 +54,17 @@ class _RecipesScreenState extends State<RecipesScreen> {
     }
   }
 
+  
   void _filterRecipes() {
     final query = _searchController.text.toLowerCase();
     List<dynamic> filtered = _allRecipes;
 
-    // Filter by category
     if (selectedCategory != 'All') {
       filtered = filtered
-          .where((r) =>
-              (r['mealType'] as List).contains(selectedCategory))
+          .where((r) => (r['mealType'] as List).contains(selectedCategory))
           .toList();
     }
 
-    // Filter by search query
     if (query.isNotEmpty) {
       filtered = filtered
           .where((r) => r['name'].toString().toLowerCase().contains(query))
@@ -82,6 +83,25 @@ class _RecipesScreenState extends State<RecipesScreen> {
         elevation: 0,
         backgroundColor: Colors.orangeAccent,
       ),
+
+      
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.orangeAccent,
+        onPressed: () async {
+          final newRecipe = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddScreen()),
+          );
+
+          if (newRecipe != null && mounted) {
+            setState(() {
+              _userRecipes.add(newRecipe);
+            });
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
+
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Colors.orangeAccent),
@@ -97,10 +117,8 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     decoration: InputDecoration(
                       hintText: 'Search recipes...',
                       prefixIcon: const Icon(Icons.search),
-
-                      
                       suffixIcon: _searchController.text.isNotEmpty
-                         ? IconButton(
+                          ? IconButton(
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchController.clear();
@@ -109,7 +127,6 @@ class _RecipesScreenState extends State<RecipesScreen> {
                               },
                             )
                           : null,
-
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -158,9 +175,9 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
                 const SizedBox(height: 10),
 
-                //  Recipes Grid
+                // Recipes Grid
                 Expanded(
-                  child: _filteredRecipes.isEmpty
+                  child: (_filteredRecipes.isEmpty && _userRecipes.isEmpty)
                       ? const Center(
                           child: Text(
                             'No recipes found 😔',
@@ -176,10 +193,17 @@ class _RecipesScreenState extends State<RecipesScreen> {
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
                           ),
-                          itemCount: _filteredRecipes.length,
+                          itemCount:
+                              _filteredRecipes.length + _userRecipes.length,
                           itemBuilder: (context, index) {
-                            final recipe = _filteredRecipes[index];
-                            return _buildRecipeCard(recipe);
+                            if (index < _filteredRecipes.length) {
+                              final recipe = _filteredRecipes[index];
+                              return _buildRecipeCard(recipe);
+                            } else {
+                              final recipe =
+                                  _userRecipes[index - _filteredRecipes.length];
+                              return _buildUserRecipeCard(recipe);
+                            }
                           },
                         ),
                 ),
@@ -188,6 +212,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
     );
   }
 
+  
   Widget _buildRecipeCard(dynamic recipe) {
     return InkWell(
       onTap: () {
@@ -278,6 +303,56 @@ class _RecipesScreenState extends State<RecipesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  
+  Widget _buildUserRecipeCard(Map<String, dynamic> recipe) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(15)),
+              child: Image.file(
+                File(recipe['imagePath']),
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text(
+                    recipe['name'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text("Category: ${recipe['category']}"),
+                  Text("Prep: ${recipe['prepTime']}"),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
