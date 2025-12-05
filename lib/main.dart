@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:food_recipes_app/helper/pref.dart';
-import 'package:food_recipes_app/helper/theme_provider.dart';
-import 'package:food_recipes_app/theme/app_theme.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:food_recipes_app/screens/Splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Pref.init();
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: const FoodRecipesApp(),
-    ),
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  print("✅ Firebase Connected Successfully!");
+  
+  runApp(const FoodRecipesApp());
 }
 
 class FoodRecipesApp extends StatelessWidget {
@@ -22,15 +20,9 @@ class FoodRecipesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Food Recipes App',
-      themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      home: const SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }

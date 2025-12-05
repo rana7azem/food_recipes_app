@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:food_recipes_app/helper/api_service.dart';
 import 'package:food_recipes_app/screens/Add.dart';
 
@@ -14,26 +15,22 @@ class _RecipesScreenState extends State<RecipesScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<dynamic> _allRecipes = [];
   List<dynamic> _filteredRecipes = [];
-  final List<Map<String, dynamic>> _userRecipes = [];
-  bool _isLoading = true;
   String selectedCategory = 'All';
   List<String> categories = ['All'];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _fetchRecipes();
-
-    _searchController.addListener(() {
-      setState(() {});
-    });
+    _searchController.addListener(() => setState(() {}));
   }
 
-  
   Future<void> _fetchRecipes() async {
     try {
       final data = await ApiService.fetchRecipes();
       final categoryList = <String>{'All'};
+
       for (var recipe in data) {
         if (recipe['mealType'] != null) {
           for (var type in recipe['mealType']) {
@@ -50,11 +47,10 @@ class _RecipesScreenState extends State<RecipesScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      debugPrint("Error fetching recipes: $e");
+      debugPrint("Error fetching API recipes: $e");
     }
   }
 
-  
   void _filterRecipes() {
     final query = _searchController.text.toLowerCase();
     List<dynamic> filtered = _allRecipes;
@@ -77,27 +73,20 @@ class _RecipesScreenState extends State<RecipesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Recipes'),
         centerTitle: true,
-        elevation: 0,
         backgroundColor: Colors.orangeAccent,
       ),
 
-      
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.orangeAccent,
         onPressed: () async {
-          final newRecipe = await Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AddScreen()),
           );
-
-          if (newRecipe != null && mounted) {
-            setState(() {
-              _userRecipes.add(newRecipe);
-            });
-          }
         },
         child: const Icon(Icons.add),
       ),
@@ -133,12 +122,11 @@ class _RecipesScreenState extends State<RecipesScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.grey[100],
-                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
 
-                //  Category Filter
+                // Category Filter
                 SizedBox(
                   height: 45,
                   child: ListView.builder(
@@ -147,7 +135,6 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     itemBuilder: (context, index) {
                       final category = categories[index];
                       final isSelected = selectedCategory == category;
-
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6.0),
                         child: ChoiceChip(
@@ -175,45 +162,59 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
                 const SizedBox(height: 10),
 
-                // Recipes Grid
+                // Recipes Grid (Firebase + API)
                 Expanded(
-                  child: (_filteredRecipes.isEmpty && _userRecipes.isEmpty)
-                      ? const Center(
-                          child: Text(
-                            'No recipes found 😔',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        )
-                      : GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.75,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                          itemCount:
-                              _filteredRecipes.length + _userRecipes.length,
-                          itemBuilder: (context, index) {
-                            if (index < _filteredRecipes.length) {
-                              final recipe = _filteredRecipes[index];
-                              return _buildRecipeCard(recipe);
-                            } else {
-                              final recipe =
-                                  _userRecipes[index - _filteredRecipes.length];
-                              return _buildUserRecipeCard(recipe);
-                            }
-                          },
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('recipes')
+                        .orderBy('createdAt', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final userRecipes = snapshot.hasData
+                          ? snapshot.data!.docs
+                          : <QueryDocumentSnapshot>[];
+
+                      if (_filteredRecipes.isEmpty &&
+                          (userRecipes.isEmpty || !snapshot.hasData)) {
+                        return const Center(
+                            child: Text('No recipes found 😔'));
+                      }
+
+                      final totalRecipes =
+                          _filteredRecipes.length + userRecipes.length;
+
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.75,
                         ),
+                        itemCount: totalRecipes,
+                        itemBuilder: (context, index) {
+                          if (index < userRecipes.length) {
+                            final recipe = userRecipes[index].data()
+                                as Map<String, dynamic>;
+                            return _buildFirebaseRecipeCard(recipe, context);
+                          } else {
+                            final recipe = _filteredRecipes[
+                                index - userRecipes.length];
+                            return _buildApiRecipeCard(recipe, context);
+                          }
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
     );
   }
 
-  
-  Widget _buildRecipeCard(dynamic recipe) {
+  // Recipe from API
+  Widget _buildApiRecipeCard(dynamic recipe, BuildContext context) {
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -223,97 +224,45 @@ class _RecipesScreenState extends State<RecipesScreen> {
           ),
         );
       },
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            //  Recipe Image
-            Expanded(
-              flex: 3,
-              child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(15)),
-                child: Image.network(
-                  recipe['image'],
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.fastfood,
-                        size: 50, color: Colors.grey),
-                  ),
-                ),
-              ),
-            ),
-
-            //  Recipe Details
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Text(
-                      recipe['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.timer_outlined, size: 16),
-                        const SizedBox(width: 4),
-                        Text('${recipe['prepTimeMinutes']} min'),
-                        const Spacer(),
-                        const Icon(Icons.star,
-                            color: Colors.amber, size: 16),
-                        Text('${recipe['rating'] ?? 4.5}'),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        (recipe['mealType'] != null &&
-                                recipe['mealType'].isNotEmpty)
-                            ? recipe['mealType'][0]
-                            : "General",
-                        style: const TextStyle(
-                          color: Colors.orangeAccent,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: _buildCard(
+        image: recipe['image'],
+        name: recipe['name'],
+        category: recipe['mealType']?.first ?? "General",
+        prepTime: "${recipe['prepTimeMinutes']} min",
       ),
     );
   }
 
-  
-  Widget _buildUserRecipeCard(Map<String, dynamic> recipe) {
+  // Recipe from Firebase
+  Widget _buildFirebaseRecipeCard(
+      Map<String, dynamic> recipe, BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FirebaseRecipeDetailsScreen(recipe: recipe),
+          ),
+        );
+      },
+      child: _buildCard(
+        image: recipe['image'] ?? '',
+        name: recipe['name'] ?? 'No Name',
+        category: recipe['category'] ?? 'N/A',
+        prepTime: recipe['prepTime'] ?? '--',
+      ),
+    );
+  }
+
+  Widget _buildCard({
+    required String image,
+    required String name,
+    required String category,
+    required String prepTime,
+  }) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -322,32 +271,29 @@ class _RecipesScreenState extends State<RecipesScreen> {
             child: ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(15)),
-              child: Image.file(
-                File(recipe['imagePath']),
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              child: image.isNotEmpty
+                  ? Image.network(image,
+                      width: double.infinity, fit: BoxFit.cover)
+                  : Container(
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.image, size: 50),
+                    ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Text(
-                    recipe['name'],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text("Category: ${recipe['category']}"),
-                  Text("Prep: ${recipe['prepTime']}"),
+                  Text(name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  Text("Category: $category"),
+                  Text("Prep: $prepTime"),
                 ],
               ),
             ),
@@ -360,7 +306,6 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
 class RecipeDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> recipe;
-
   const RecipeDetailsScreen({super.key, required this.recipe});
 
   @override
@@ -385,35 +330,79 @@ class RecipeDetailsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              recipe['name'],
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(recipe['name'],
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
               "Category: ${recipe['mealType']?.join(', ') ?? 'N/A'}",
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
             const SizedBox(height: 16),
-            const Text(
-              "Ingredients:",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            const Text("Ingredients:",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             ...List.generate(
               (recipe['ingredients'] as List).length,
               (index) => Text("• ${recipe['ingredients'][index]}"),
             ),
             const SizedBox(height: 16),
-            const Text(
-              "Instructions:",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            const Text("Instructions:",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Text(recipe['instructions'].join('\n')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FirebaseRecipeDetailsScreen extends StatelessWidget {
+  final Map<String, dynamic> recipe;
+  const FirebaseRecipeDetailsScreen({super.key, required this.recipe});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(recipe['name'] ?? 'Recipe'),
+        backgroundColor: Colors.orangeAccent,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (recipe['image'] != null && recipe['image'] != '')
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  recipe['image'],
+                  height: 250,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(recipe['name'] ?? '',
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text("Category: ${recipe['category'] ?? 'N/A'}",
+                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text("Prep Time: ${recipe['prepTime'] ?? '--'}",
+                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+            Text("Cook Time: ${recipe['cookTime'] ?? '--'}",
+                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text("Servings: ${recipe['servings'] ?? '--'}",
+                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+            const SizedBox(height: 16),
+            const Text("🧾 Description:",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(recipe['description'] ?? 'No details provided'),
           ],
         ),
       ),

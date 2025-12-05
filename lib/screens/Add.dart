@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class AddScreen extends StatefulWidget {
@@ -15,15 +17,17 @@ class _AddRecipePageState extends State<AddScreen> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
-  // Controllers for text fields
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _difficultyController = TextEditingController();
   final TextEditingController _prepTimeController = TextEditingController();
   final TextEditingController _cookTimeController = TextEditingController();
   final TextEditingController _servingsController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
-  
+  bool _isUploading = false;
+
+  // Pick image from camera or gallery
   Future<void> _pickImage(ImageSource source) async {
     if (source == ImageSource.camera) {
       final status = await Permission.camera.request();
@@ -51,7 +55,57 @@ class _AddRecipePageState extends State<AddScreen> {
     }
   }
 
-  
+  //Upload to Firebase Storage
+  Future<String?> _uploadImageToFirebase(File imageFile) async {
+    try {
+      final fileName = "recipes/${DateTime.now().millisecondsSinceEpoch}.jpg";
+      final ref = FirebaseStorage.instance.ref().child(fileName);
+      await ref.putFile(imageFile);
+      return await ref.getDownloadURL(); //return public link
+    } catch (e) {
+      debugPrint("Image upload error: $e");
+      return null;
+    }
+  }
+
+  // Save recipe data to Firestore
+  Future<void> _saveRecipe() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isUploading = true);
+
+    String? imageUrl;
+    if (_image != null) {
+      imageUrl = await _uploadImageToFirebase(_image!);
+    }
+
+    final recipeData = {
+      'name': _nameController.text.trim(),
+      'category': _categoryController.text.trim(),
+      'difficulty': _difficultyController.text.trim(),
+      'prepTime': _prepTimeController.text.trim(),
+      'cookTime': _cookTimeController.text.trim(),
+      'servings': _servingsController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'image': imageUrl ?? '',
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await FirebaseFirestore.instance.collection('recipes').add(recipeData);
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Recipe added successfully!")),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error adding recipe: $e")),
+      );
+    }
+  }
+
   void _showImagePickerOptions() {
     showModalBottomSheet(
       context: context,
@@ -105,44 +159,35 @@ class _AddRecipePageState extends State<AddScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        centerTitle: true,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/images/cook-book.png',
-              height: 40,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              "FLAVOR FIESTA",
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
+appBar: AppBar(
+  backgroundColor: Colors.white,
+  elevation: 1,
+  centerTitle: true,
+  title: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Image.asset(
+        'assets/images/cook-book.png', 
+        height: 28, 
+      ),
+      const SizedBox(width: 8),
+      const Text(
+        "Add New Recipe",
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
       ),
-      body: SingleChildScrollView(
+    ],
+  ),
+),
+body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Add New Recipe",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-
-              
               Text("Recipe Photo", style: TextStyle(color: Colors.grey[800])),
               const SizedBox(height: 8),
               GestureDetector(
@@ -181,71 +226,84 @@ class _AddRecipePageState extends State<AddScreen> {
 
               const SizedBox(height: 25),
 
-              _buildTextField("Recipe Name *", "e.g., Chocolate Cake", _nameController),
+              _buildTextField(
+                controller: _nameController,
+                label: "Recipe Name *",
+                hint: "e.g., Chocolate Cake",
+              ),
               const SizedBox(height: 15),
 
               Row(
                 children: [
-                  Expanded(child: _buildTextField("Category *", "e.g., Dessert", _categoryController)),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _categoryController,
+                      label: "Category *",
+                      hint: "Dessert",
+                    ),
+                  ),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildTextField("Difficulty", "Easy", _difficultyController)),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _difficultyController,
+                      label: "Difficulty",
+                      hint: "Easy",
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 15),
 
               Row(
                 children: [
-                  Expanded(child: _buildTextField("Prep Time", "e.g., 15 min", _prepTimeController)),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _prepTimeController,
+                      label: "Prep Time",
+                      hint: "15 min",
+                    ),
+                  ),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildTextField("Cook Time", "e.g., 30 min", _cookTimeController)),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _cookTimeController,
+                      label: "Cook Time",
+                      hint: "30 min",
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 15),
 
-              _buildTextField("Servings", "4", _servingsController),
+              _buildTextField(
+                controller: _servingsController,
+                label: "Servings",
+                hint: "4",
+              ),
+              const SizedBox(height: 15),
+
+              _buildTextField(
+                controller: _descriptionController,
+                label: "Description",
+                hint: "Write short details...",
+                maxLines: 3,
+              ),
+
               const SizedBox(height: 25),
 
-               
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      if (_image == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Please upload a photo first 📸"),
-                          ),
-                        );
-                        return;
-                      }
-
-                        
-                      final newRecipe = {
-                        "name": _nameController.text,
-                        "category": _categoryController.text,
-                        "difficulty": _difficultyController.text,
-                        "prepTime": _prepTimeController.text,
-                        "cookTime": _cookTimeController.text,
-                        "servings": _servingsController.text,
-                        "imagePath": _image!.path,
-                      };
-
-                    
-                      Navigator.pop(context, newRecipe);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Recipe added successfully! 🎉"),
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    "Add Recipe",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  onPressed: _isUploading ? null : _saveRecipe,
+                  icon: _isUploading
+                      ? const CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2)
+                      : const Icon(Icons.add),
+                  label: Text(
+                    _isUploading ? "Uploading..." : "Add Recipe",
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
@@ -262,10 +320,21 @@ class _AddRecipePageState extends State<AddScreen> {
     );
   }
 
-  // ✅ Text Field reusable widget
-  Widget _buildTextField(String label, String hint, TextEditingController controller) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    int maxLines = 1,
+  }) {
     return TextFormField(
       controller: controller,
+      validator: (value) {
+        if (label.contains('*') && (value == null || value.isEmpty)) {
+          return 'This field is required';
+        }
+        return null;
+      },
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -282,12 +351,6 @@ class _AddRecipePageState extends State<AddScreen> {
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "This field is required";
-        }
-        return null;
-      },
     );
   }
 }
