@@ -1,30 +1,31 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Pref {
-  // Key for onboarding status
+
   static const String _keyShowOnboarding = 'show_onboarding';
+  static const String _keyDarkMode = 'dark_mode';
+
+  
   static SharedPreferences? _prefs;
 
-  // Initialize SharedPreferences
+  
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  // Getter for showOnboarding
-  static bool get showOnboarding {
-    try {
-      return _prefs?.getBool(_keyShowOnboarding) ?? true;
-    } catch (e) {
-      return true;
-    }
+  
+  static bool get showOnboarding =>
+      _prefs?.getBool(_keyShowOnboarding) ?? true;
+
+  static Future<bool> setShowOnboarding(bool value) async {
+    return await _prefs?.setBool(_keyShowOnboarding, value) ?? false;
   }
 
-  // Setter for showOnboarding
-  static Future<bool> setShowOnboarding(bool value) async {
-    try {
-      return await _prefs?.setBool(_keyShowOnboarding, value) ?? false;
-    } catch (e) {
-      return false;
-    }
+
+  static bool get isDarkMode =>
+      _prefs?.getBool(_keyDarkMode) ?? false;
+
+  static Future<void> setDarkMode(bool value) async {
+    await _prefs?.setBool(_keyDarkMode, value);
   }
 }

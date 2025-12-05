@@ -1,65 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:food_recipes_app/helper/pref.dart';
-import 'package:food_recipes_app/screens/Splash_screen.dart';
+import 'package:food_recipes_app/helper/theme_provider.dart';
 import 'package:food_recipes_app/theme/app_theme.dart';
+import 'package:food_recipes_app/screens/Splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Pref.init();
 
-  try {
-    await Pref.init();
-  } catch (e) {
-    debugPrint('Error initializing SharedPreferences: $e');
-  }
-  
-  // Set system UI mode and orientation
-  try {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    await SystemChrome.setPreferredOrientations(
-        [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
-  } catch (e) {
-    debugPrint('Error setting system UI: $e');
-  }
-  
-  runApp(const FoodRecipesApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const FoodRecipesApp(),
+    ),
+  );
 }
 
-// Global variable for theme state
-bool isDarkMode = false;
-
-class FoodRecipesApp extends StatefulWidget {
+class FoodRecipesApp extends StatelessWidget {
   const FoodRecipesApp({super.key});
 
   @override
-  State<FoodRecipesApp> createState() => _FoodRecipesAppState();
-}
-
-class _FoodRecipesAppState extends State<FoodRecipesApp> {
-  bool _isDark = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // _loadTheme();
-  }
-
-  //Future<void> _loadTheme() async {
- // }
-
-  void toggleTheme(bool value) {
-    setState(() {
-      _isDark = value;
-      isDarkMode = value;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Food Recipes App',
-      themeMode: _isDark ? ThemeMode.dark : ThemeMode.light,
+      themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       home: const SplashScreen(),
