@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'package:food_recipes_app/helper/theme_provider.dart';
 import 'package:food_recipes_app/screens/Splash_screen.dart';
 import 'package:food_recipes_app/screens/login_screen.dart';
 import 'package:food_recipes_app/screens/signup_screen.dart';
