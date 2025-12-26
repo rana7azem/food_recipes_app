@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:food_recipes_app/helper/api_service.dart';
 import 'package:food_recipes_app/screens/Add.dart';
+import '/services/recipe_service.dart';
 
 class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
@@ -18,12 +19,14 @@ class _RecipesScreenState extends State<RecipesScreen> {
   String selectedCategory = 'All';
   List<String> categories = ['All'];
   bool _isLoading = true;
+  late Stream<List<Map<String, dynamic>>> _recipesStream;
 
   @override
   void initState() {
     super.initState();
     _fetchRecipes();
     _searchController.addListener(() => setState(() {}));
+    _recipesStream = RecipeService().getAllRecipesStream();
   }
 
   Future<void> _fetchRecipes() async {
@@ -82,15 +85,31 @@ class _RecipesScreenState extends State<RecipesScreen> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         foregroundColor: theme.appBarTheme.foregroundColor,
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orangeAccent,
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddScreen()),
-          );
-        },
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: "debug",
+            backgroundColor: Colors.blue,
+            mini: true,
+            onPressed: () async {
+              await RecipeService().debugPrintDatabaseContents();
+            },
+            child: const Icon(Icons.bug_report),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            heroTag: "add",
+            backgroundColor: Colors.orangeAccent,
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddScreen()),
+              );
+            },
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(
@@ -168,18 +187,11 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
                 // 🧾 Recipes Grid (Firebase + API)
                 Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('recipes')
-                        .orderBy('createdAt', descending: true)
-                        .snapshots(),
+                  child: StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: _recipesStream,
                     builder: (context, snapshot) {
-                      final userRecipes = snapshot.hasData
-                          ? snapshot.data!.docs
-                          : <QueryDocumentSnapshot>[];
-
-                      if (_filteredRecipes.isEmpty &&
-                          (userRecipes.isEmpty || !snapshot.hasData)) {
+                      final userRecipes = snapshot.data ?? [];
+                      if (_filteredRecipes.isEmpty && userRecipes.isEmpty) {
                         return Center(
                           child: Text(
                             'No recipes found 😔',
@@ -205,8 +217,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         itemCount: totalRecipes,
                         itemBuilder: (context, index) {
                           if (index < userRecipes.length) {
-                            final recipe = userRecipes[index].data()
-                                as Map<String, dynamic>;
+                            final recipe = userRecipes[index];
                             return _buildFirebaseRecipeCard(recipe, context);
                           } else {
                             final recipe = _filteredRecipes[

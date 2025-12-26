@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '/helper/form_validator.dart';
 import '/helper/user_feedback.dart';
 import '/helper/form_handler.dart';
+import '/services/recipe_service.dart';
 
 class AddScreen extends StatefulWidget {
   const AddScreen({super.key});
@@ -114,10 +116,24 @@ class _AddRecipePageState extends State<AddScreen> {
   }
 
   Future<void> _saveRecipe() async {
+    print('=== DEBUG: Starting recipe save process ===');
+    
     if (!_formKey.currentState!.validate()) {
+      print('DEBUG: Form validation failed');
       UserFeedback.showWarning(context, 'Please fix the errors in the form');
       return;
     }
+
+    // Check authentication status first
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('DEBUG: User not authenticated');
+      if (mounted) {
+        UserFeedback.showError(context, 'Please log in to add recipes');
+      }
+      return;
+    }
+    print('DEBUG: User authenticated: ${user.uid}');
 
     // Check if image is required (optional in this case)
     if (_image == null) {
@@ -134,6 +150,7 @@ class _AddRecipePageState extends State<AddScreen> {
     setState(() => _isUploading = true);
 
     try {
+      print('DEBUG: Showing loading dialog');
       // Show loading dialog
       if (mounted) {
         await UserFeedback.showLoadingDialog(
@@ -146,14 +163,16 @@ class _AddRecipePageState extends State<AddScreen> {
       // Upload image if selected
       String? imageUrl;
       if (_image != null) {
+        print('DEBUG: Starting image upload');
         imageUrl = await _uploadImageToFirebase(_image!);
+        print('DEBUG: Image upload completed. URL: $imageUrl');
         if (imageUrl == null && mounted) {
           Navigator.pop(context); // Close loading dialog
           UserFeedback.showWarning(context, 'Continuing without image');
         }
       }
 
-      // Build recipe data
+      print('DEBUG: Preparing recipe data');
       final recipeData = {
         'name': FormValidator.sanitizeInput(_nameController.text),
         'category': FormValidator.sanitizeInput(_categoryController.text),
@@ -162,15 +181,37 @@ class _AddRecipePageState extends State<AddScreen> {
         'cookTime': _cookTimeController.text.trim(),
         'servings': _servingsController.text.trim(),
         'description': FormValidator.sanitizeInput(_descriptionController.text),
-        'image': imageUrl ?? '',
-        'createdAt': FieldValue.serverTimestamp(),
+        'imageUrl': imageUrl ?? '',
       };
+      print('DEBUG: Recipe data: $recipeData');
 
-      // Save to Firestore
-      await FirebaseFirestore.instance.collection('recipes').add(recipeData);
+      print('DEBUG: Saving to Firebase Realtime Database');
+      // Save to Firebase Realtime Database using RecipeService
+      final recipeService = RecipeService();
+      final recipeId = await recipeService.addRecipe(
+        name: recipeData['name']!,
+        category: recipeData['category']!,
+        difficulty: recipeData['difficulty']!,
+        prepTime: recipeData['prepTime']!,
+        cookTime: recipeData['cookTime']!,
+        servings: recipeData['servings']!,
+        description: recipeData['description']!,
+        imageUrl: recipeData['imageUrl']!,
+      );
+      print('DEBUG: Recipe saved with ID: $recipeId');
 
       if (mounted) {
         Navigator.pop(context); // Close loading dialog
+        
+        // Clear form
+        _nameController.clear();
+        _categoryController.clear();
+        _difficultyController.clear();
+        _prepTimeController.clear();
+        _cookTimeController.clear();
+        _servingsController.clear();
+        _descriptionController.clear();
+        setState(() => _image = null);
         
         // Show success dialog
         await UserFeedback.showSuccessDialog(
@@ -181,6 +222,7 @@ class _AddRecipePageState extends State<AddScreen> {
         );
       }
     } on FirebaseException catch (e) {
+      print('DEBUG: Firebase Exception: ${e.code} - ${e.message}');
       if (mounted) {
         Navigator.pop(context); // Close loading dialog
         UserFeedback.showErrorDialog(
@@ -190,7 +232,9 @@ class _AddRecipePageState extends State<AddScreen> {
           onRetry: _saveRecipe,
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('DEBUG: General Exception: $e');
+      print('DEBUG: Stack trace: $stackTrace');
       if (mounted) {
         Navigator.pop(context); // Close loading dialog
         UserFeedback.showErrorDialog(
@@ -202,6 +246,7 @@ class _AddRecipePageState extends State<AddScreen> {
       }
     } finally {
       setState(() => _isUploading = false);
+      print('DEBUG: Recipe save process completed');
     }
   }
 
