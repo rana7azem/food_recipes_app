@@ -304,9 +304,9 @@ class _AddRecipePageState extends State<AddScreen> {
                 children: [
                   Expanded(
                     child: _buildTextField(
-                      controller: _prepTimeController,
-                      label: "Prep Time (min)",
-                      hint: "15",
+                      _prepTimeController,
+                      "Prep Time (min)",
+                      "15",
                       validator: (value) => FormValidator.validateTime(value, 'Prep Time'),
                       onChanged: (value) => _formHandler.setFieldValue('prepTime', value),
                       keyboardType: TextInputType.number,
@@ -315,9 +315,9 @@ class _AddRecipePageState extends State<AddScreen> {
                   const SizedBox(width: 15),
                   Expanded(
                     child: _buildTextField(
-                      controller: _cookTimeController,
-                      label: "Cook Time (min)",
-                      hint: "30",
+                      _cookTimeController,
+                      "Cook Time (min)",
+                      "30",
                       validator: (value) => FormValidator.validateTime(value, 'Cook Time'),
                       onChanged: (value) => _formHandler.setFieldValue('cookTime', value),
                       keyboardType: TextInputType.number,
@@ -377,14 +377,17 @@ class _AddRecipePageState extends State<AddScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, String hint,
-      {int maxLines = 1, TextInputType keyboardType = TextInputType.text}) {
+  Widget _buildTextField(
+      TextEditingController controller, String label, String hint,
+      {int maxLines = 1,
+      TextInputType keyboardType = TextInputType.text,
+      String? Function(String?)? validator,
+      void Function(String)? onChanged}) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
       onChanged: onChanged,
-      validator: validator,
       textInputAction: maxLines == 1 ? TextInputAction.next : null,
       decoration: InputDecoration(
         labelText: label,
@@ -396,12 +399,13 @@ class _AddRecipePageState extends State<AddScreen> {
           borderRadius: BorderRadius.circular(10),
         ),
       ),
-      validator: (value) {
-        if (label.contains('*') && (value == null || value.isEmpty)) {
-          return 'This field is required';
-        }
-        return null;
-      },
+      validator: validator ??
+          (value) {
+            if (label.contains('*') && (value == null || value.isEmpty)) {
+              return 'This field is required';
+            }
+            return null;
+          },
     );
   }
 }
