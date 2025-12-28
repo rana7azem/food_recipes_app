@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:food_recipes_app/helper/theme_provider.dart';
+import 'package:food_recipes_app/helper/pref.dart';
+import 'package:food_recipes_app/helper/recipe_loader.dart';
 import 'package:food_recipes_app/screens/Splash_screen.dart';
 import 'package:food_recipes_app/screens/login_screen.dart';
 import 'package:food_recipes_app/screens/signup_screen.dart';
@@ -10,6 +12,22 @@ import 'package:food_recipes_app/widgets/bottom_nav_bar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize SharedPreferences
+  try {
+    await Pref.init();
+    print("✅ SharedPreferences initialized successfully!");
+  } catch (e) {
+    print("⚠️ SharedPreferences initialization warning: $e");
+  }
+
+  // Load user recipes from SharedPreferences
+  try {
+    await RecipeLoader.loadUserRecipes();
+    print("✅ User recipes loaded from SharedPreferences!");
+  } catch (e) {
+    print("⚠️ Recipe loading warning: $e");
+  }
 
   try {
     await Firebase.initializeApp(

@@ -48,10 +48,25 @@ flutter {
     source = "../.."
 }
 
+// Copy APK to expected location after build
+afterEvaluate {
+    tasks.register<Copy>("copyApkToFlutter") {
+        dependsOn("assembleDebug")
+        from("$buildDir/outputs/apk/debug/app-debug.apk")
+        into("../../build/app/outputs/flutter-apk")
+        rename { "app.apk" }
+    }
+    
+    tasks.named("assembleDebug") {
+        finalizedBy("copyApkToFlutter")
+    }
+}
+
 dependencies {
     // ✅ Firebase Core Dependencies
     implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-database")  // Realtime Database
 }

@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '/helper/form_validator.dart';
 import '/helper/user_feedback.dart';
 import '/helper/form_handler.dart';
+import '/services/recipe_service.dart';
+import '/services/notification_service.dart';
 
 class AddScreen extends StatefulWidget {
   const AddScreen({super.key});
@@ -101,16 +103,32 @@ class _AddRecipePageState extends State<AddScreen> {
     }
   }
 
-  Future<String?> _uploadImageToFirebase(File imageFile) async {
+  /// Save image locally to app's documents directory (FREE - no Firebase Storage needed)
+  Future<String?> _saveImageLocally(File imageFile) async {
     try {
-      final fileName = "recipes/${DateTime.now().millisecondsSinceEpoch}.jpg";
-      final ref = FirebaseStorage.instance.ref().child(fileName);
-      await ref.putFile(imageFile);
-      return await ref.getDownloadURL();
+      // Get the app's documents directory
+      final appDir = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${appDir.path}/recipe_images');
+      
+      // Create the directory if it doesn't exist
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+      
+      // Generate unique filename
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final savedImagePath = '${imagesDir.path}/$fileName';
+      
+      // Copy the image to the app's directory
+      await imageFile.copy(savedImagePath);
+      
+      print('✅ Image saved locally: $savedImagePath');
+      return savedImagePath;
     } catch (e) {
+      print('❌ Failed to save image locally: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Image upload error: $e'),
+          content: Text('❌ Image save error: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -119,24 +137,65 @@ class _AddRecipePageState extends State<AddScreen> {
   }
 
   Future<void> _saveRecipe() async {
+    print('=== DEBUG: Starting recipe save process ===');
+    
     if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please fill all required fields.'),
-          backgroundColor: Colors.orangeAccent,
-        ),
-      );
+      print('DEBUG: Form validation failed');
+      UserFeedback.showWarning(context, 'Please fix the errors in the form');
       return;
+    }
+
+    // Check authentication status first
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('DEBUG: User not authenticated');
+      if (mounted) {
+        UserFeedback.showError(context, 'Please log in to add recipes');
+      }
+      return;
+    }
+    print('DEBUG: User authenticated: ${user.uid}');
+
+    // Check if image is required (optional in this case)
+    if (_image == null) {
+      final confirm = await UserFeedback.showConfirmDialog(
+        context,
+        title: 'No Image Selected',
+        message: 'Do you want to add recipe without an image?',
+        confirmText: 'Continue',
+        cancelText: 'Add Image',
+      );
+      if (confirm != true) {
+        return;
+      }
     }
 
     setState(() => _isUploading = true);
 
     try {
-      String? imageUrl;
-      if (_image != null) {
-        imageUrl = await _uploadImageToFirebase(_image!);
+      print('DEBUG: Showing loading dialog');
+      // Show loading dialog (don't await - it will block)
+      if (mounted) {
+        UserFeedback.showLoadingDialog(
+          context,
+          message: 'Saving your recipe...',
+          dismissible: false,
+        );
       }
 
+      // Save image locally if selected (FREE - no Firebase Storage needed)
+      String? imageUrl;
+      if (_image != null) {
+        print('DEBUG: Starting local image save');
+        imageUrl = await _saveImageLocally(_image!);
+        print('DEBUG: Image saved locally. Path: $imageUrl');
+        if (imageUrl == null && mounted) {
+          Navigator.pop(context); // Close loading dialog
+          UserFeedback.showWarning(context, 'Continuing without image');
+        }
+      }
+
+      print('DEBUG: Preparing recipe data');
       final recipeData = {
         'name': _nameController.text.trim(),
         'category': _categoryController.text.trim(),
@@ -144,31 +203,81 @@ class _AddRecipePageState extends State<AddScreen> {
         'prepTime': _prepTimeController.text.trim(),
         'cookTime': _cookTimeController.text.trim(),
         'servings': _servingsController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'image': imageUrl ?? '',
-        'createdAt': FieldValue.serverTimestamp(),
+        'description': FormValidator.sanitizeInput(_descriptionController.text),
+        'imageUrl': imageUrl ?? '',
       };
+      print('DEBUG: Recipe data: $recipeData');
 
-      await FirebaseFirestore.instance.collection('recipes').add(recipeData);
+      print('DEBUG: Saving to Firebase Realtime Database');
+      
+      // Save to Firebase Realtime Database using RecipeService
+      final recipeService = RecipeService();
+      await recipeService.addRecipe(
+        name: recipeData['name']!,
+        category: recipeData['category']!,
+        difficulty: recipeData['difficulty']!,
+        prepTime: recipeData['prepTime']!,
+        cookTime: recipeData['cookTime']!,
+        servings: recipeData['servings']!,
+        description: recipeData['description']!,
+        imageUrl: recipeData['imageUrl']!,
+      );
+      print('DEBUG: Recipe saved to Firebase successfully');
+
+      // Store recipe name for notification before clearing
+      final recipeName = recipeData['name']!;
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Recipe added successfully!'),
-            backgroundColor: Colors.orangeAccent,
-          ),
+        Navigator.pop(context); // Close loading dialog
+        
+        // Clear form
+        _nameController.clear();
+        _categoryController.clear();
+        _difficultyController.clear();
+        _prepTimeController.clear();
+        _cookTimeController.clear();
+        _servingsController.clear();
+        _descriptionController.clear();
+        setState(() => _image = null);
+        
+        // Show notification for recipe added
+        NotificationService.showRecipeAddedNotification(context, recipeName);
+        
+        // Show success dialog
+        await UserFeedback.showSuccessDialog(
+          context,
+          title: 'Success',
+          message: 'Recipe added successfully!',
+          onDismiss: () => Navigator.pop(context),
+        );
+      }
+    } on FirebaseException catch (e) {
+      print('DEBUG: Firebase Exception: ${e.code} - ${e.message}');
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        UserFeedback.showErrorDialog(
+          context,
+          title: 'Firebase Error',
+          message: 'Failed to save recipe: ${e.message}',
+          onRetry: _saveRecipe,
         );
         Navigator.pop(context);
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Failed to add recipe: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+    } catch (e, stackTrace) {
+      print('DEBUG: General Exception: $e');
+      print('DEBUG: Stack trace: $stackTrace');
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        UserFeedback.showErrorDialog(
+          context,
+          title: 'Error',
+          message: 'Failed to save recipe: $e',
+          onRetry: _saveRecipe,
+        );
+      }
     } finally {
       setState(() => _isUploading = false);
+      print('DEBUG: Recipe save process completed');
     }
   }
 
@@ -295,18 +404,23 @@ class _AddRecipePageState extends State<AddScreen> {
               const SizedBox(height: 25),
 
               _buildTextField(
-                  _nameController, "Recipe Name *", "e.g., Chocolate Cake"),
+                  controller: _nameController,
+                  label: "Recipe Name *",
+                  hint: "e.g., Chocolate Cake"),
               const SizedBox(height: 15),
-              _buildTextField(_categoryController, "Category *", "Dessert"),
+              _buildTextField(
+                  controller: _categoryController,
+                  label: "Category *",
+                  hint: "Dessert"),
               const SizedBox(height: 15),
 
               Row(
                 children: [
                   Expanded(
                     child: _buildTextField(
-                      _prepTimeController,
-                      "Prep Time (min)",
-                      "15",
+                      controller: _prepTimeController,
+                      label: "Prep Time (min)",
+                      hint: "15",
                       validator: (value) => FormValidator.validateTime(value, 'Prep Time'),
                       onChanged: (value) => _formHandler.setFieldValue('prepTime', value),
                       keyboardType: TextInputType.number,
@@ -315,9 +429,9 @@ class _AddRecipePageState extends State<AddScreen> {
                   const SizedBox(width: 15),
                   Expanded(
                     child: _buildTextField(
-                      _cookTimeController,
-                      "Cook Time (min)",
-                      "30",
+                      controller: _cookTimeController,
+                      label: "Cook Time (min)",
+                      hint: "30",
                       validator: (value) => FormValidator.validateTime(value, 'Cook Time'),
                       onChanged: (value) => _formHandler.setFieldValue('cookTime', value),
                       keyboardType: TextInputType.number,
@@ -327,19 +441,29 @@ class _AddRecipePageState extends State<AddScreen> {
               ),
               const SizedBox(height: 15),
               _buildTextField(
-                  _prepTimeController, "Prep Time (min)", "15",
+                  controller: _prepTimeController,
+                  label: "Prep Time (min)",
+                  hint: "15",
                   keyboardType: TextInputType.number),
               const SizedBox(height: 15),
               _buildTextField(
-                  _cookTimeController, "Cook Time (min)", "30",
+                  controller: _cookTimeController,
+                  label: "Cook Time (min)",
+                  hint: "30",
                   keyboardType: TextInputType.number),
               const SizedBox(height: 15),
-              _buildTextField(_servingsController, "Servings", "4",
+              _buildTextField(
+                  controller: _servingsController,
+                  label: "Servings",
+                  hint: "4",
                   keyboardType: TextInputType.number),
               const SizedBox(height: 15),
-              _buildTextField(_descriptionController, "Description",
-                  "Write short details about your recipe...",
-                  maxLines: 3, keyboardType: TextInputType.multiline),
+              _buildTextField(
+                  controller: _descriptionController,
+                  label: "Description",
+                  hint: "Write short details about your recipe...",
+                  maxLines: 3,
+                  keyboardType: TextInputType.multiline),
               const SizedBox(height: 25),
 
               /// ✅ unified add button
@@ -377,12 +501,15 @@ class _AddRecipePageState extends State<AddScreen> {
     );
   }
 
-  Widget _buildTextField(
-      TextEditingController controller, String label, String hint,
-      {int maxLines = 1,
-      TextInputType keyboardType = TextInputType.text,
-      String? Function(String?)? validator,
-      void Function(String)? onChanged}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+    Function(String)? onChanged,
+  }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
@@ -399,13 +526,12 @@ class _AddRecipePageState extends State<AddScreen> {
           borderRadius: BorderRadius.circular(10),
         ),
       ),
-      validator: validator ??
-          (value) {
-            if (label.contains('*') && (value == null || value.isEmpty)) {
-              return 'This field is required';
-            }
-            return null;
-          },
+      validator: validator ?? (value) {
+        if (label.contains('*') && (value == null || value.isEmpty)) {
+          return 'This field is required';
+        }
+        return null;
+      },
     );
   }
 }

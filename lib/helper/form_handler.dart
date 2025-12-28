@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 class FormHandler {
   final Map<String, String> _formData = {};

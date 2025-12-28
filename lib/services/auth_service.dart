@@ -1,15 +1,21 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Use lazy initialization to avoid "no instance" error
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+
+  // Check if Firebase is initialized
+  bool get isFirebaseInitialized => Firebase.apps.isNotEmpty;
 
   // Get current user
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => isFirebaseInitialized ? _auth.currentUser : null;
 
   // Stream of auth state changes
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<User?> get authStateChanges => 
+      isFirebaseInitialized ? _auth.authStateChanges() : Stream.value(null);
 
   // Sign up with email and password
   Future<UserCredential?> signUp({

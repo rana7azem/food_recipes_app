@@ -1,8 +1,13 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  // Use lazy initialization to avoid "no instance" error
+  FirebaseStorage get _storage => FirebaseStorage.instance;
+
+  // Check if Firebase is initialized
+  bool get _isFirebaseInitialized => Firebase.apps.isNotEmpty;
 
   // Upload profile picture
   Future<String> uploadProfilePicture({
