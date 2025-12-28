@@ -32,6 +32,31 @@ class ChecklistItem {
       unit: unit ?? this.unit,
     );
   }
+
+  // Convert to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'category': category,
+      'isChecked': isChecked,
+      'quantity': quantity,
+      'unit': unit,
+    };
+  }
+
+  // Create from Map (Firestore)
+  factory ChecklistItem.fromMap(Map<String, dynamic> map) {
+    return ChecklistItem(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      category: map['category'] ?? '',
+      isChecked: map['isChecked'] ?? false,
+      quantity: map['quantity'] ?? '',
+      unit: map['unit'] ?? '',
+    );
+  }
+
 }
 
 class Checklist {
@@ -50,6 +75,36 @@ class Checklist {
     required this.createdAt,
     this.completedAt,
   });
+
+  // Convert to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'recipeId': recipeId,
+      'items': items.map((item) => item.toMap()).toList(),
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'completedAt': completedAt?.millisecondsSinceEpoch,
+    };
+  }
+
+  // Create from Map (Firestore)
+  factory Checklist.fromMap(Map<String, dynamic> map) {
+    return Checklist(
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      recipeId: map['recipeId'] ?? '',
+      items: (map['items'] as List<dynamic>?)
+              ?.map((item) => ChecklistItem.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          [],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
+      completedAt: map['completedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['completedAt'])
+          : null,
+    );
+  }
+
 
   static List<Checklist> sampleChecklists = [
     Checklist(
