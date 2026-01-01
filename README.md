@@ -1,8 +1,14 @@
-# 🍳 Food Recipes App
+# 🍳 Flavor Fiesta - Food Recipes App
 
-A Flutter-based mobile application for discovering, saving, and managing your favorite recipes.
+A Flutter-based mobile application for discovering, saving, and managing your favorite recipes. Your ultimate kitchen companion, helping you discover, organize, and cook delicious recipes from around the world.
 
-## Features
+## 🔗 Links
+
+- 🌐 **Website:** [https://flavor0fiesta.netlify.app/](https://flavor0fiesta.netlify.app/)
+- 📺 **YouTube Demo:** [Watch on YouTube](https://youtube.com/shorts/ipG1hKtvILw)
+- 📱 **Android APK:** [Download APK](https://drive.usercontent.google.com/download?id=1bKssqRRi11Ld7-wMK9sLWzPdOrg73U0R&export=download&authuser=0)
+
+## 🌟 Features
 
 - 📖 Browse and search recipes
 - ➕ Add your own custom recipes
@@ -17,7 +23,7 @@ A Flutter-based mobile application for discovering, saving, and managing your fa
 
 *Coming soon*
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -48,7 +54,7 @@ A Flutter-based mobile application for discovering, saving, and managing your fa
    flutter run
    ```
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 lib/
@@ -62,7 +68,7 @@ lib/
 └── widgets/               # Reusable UI components
 ```
 
-## Dependencies
+## 📚 Dependencies
 
 - **Firebase** - Authentication, Firestore, Storage
 - **Provider** - State management
@@ -70,10 +76,25 @@ lib/
 - **ImagePicker** - Photo selection
 - **Audioplayers** - Sound effects
 
-## Contributing
+## 👥 Team
+
+Flavor Fiesta was created by a team of dedicated Fullstack Mobile Developers:
+
+- **Nour Eldin Mohamed** - [GitHub](https://github.com/Noureqo1)
+- **Rana Hazem Almahdy** - [GitHub](https://github.com/rana7azem)
+- **Wafaa Abdulrazek** - [GitHub](https://github.com/wafaaabdulrazek)
+- **Hala Mohamed Salah** - [GitHub](https://github.com/HalaMohamed1)
+
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+## 📝 License
 
 This project is for educational purposes.
+
+---
+
+**Made with ❤️ by the Flavor Fiesta Team**
+
+Happy Cooking! 🍽️
